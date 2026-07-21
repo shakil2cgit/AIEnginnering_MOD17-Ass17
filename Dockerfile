@@ -21,10 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ==============================================================================
-# ধাপ ৪: পাইথন প্যাকেজ ইনস্টল করা (Install Python Dependencies)
+# ধাপ ৪: পাইথন প্যাকেজ ও CPU PyTorch দ্রুত ইনস্টল করা (Fast CPU PyTorch & Packages)
 # ==============================================================================
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
 # ==============================================================================
