@@ -29,10 +29,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # ==============================================================================
-# ধাপ ৫: প্রজেক্ট সোর্স কোড ও মডেল কপি করা (Copy Application Code & Models)
+# ধাপ ৫: প্রজেক্ট সোর্স কোড ও মডেল ফোল্ডার তৈরি (Copy Application Code)
 # ==============================================================================
 COPY app /app/app
-COPY models /app/models
+RUN mkdir -p /app/models
 
 # ==============================================================================
 # ধাপ ৬: পোর্ট এক্সপোজ এবং অ্যাপ্লিকেশন রান কমান্ড (Expose Port & Run Command)
