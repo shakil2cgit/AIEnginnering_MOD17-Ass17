@@ -1,0 +1,151 @@
+Docker
+
+Project Tasks & Questions (Total: 100 Marks)
+1. Model Integration & Inference Pipeline (15 Marks)
+
+2. Load the trained YOLOv11 model weights from Phase-1.
+
+3. Implement an inference pipeline that:
+
+- Accepts an input image
+
+- Performs object detection
+
+- Returns detected classes, confidence scores, and bounding box coordinates
+
+3. Ensure the pipeline works for single image inference.
+
+Submit:
+
+• Python script/notebook demonstrating successful inference
+
+• Sample output (printed or visualized)
+
+2. REST API Development (25 Marks)
+
+Develop a REST API using FastAPI or Flask to serve the trained model.
+
+API Requirements:
+• Endpoint: /predict
+
+• HTTP Method: POST
+
+• Input: Image file (JPEG/PNG)
+
+• Output (JSON):
+
+• Detected denomination names
+
+• Confidence scores
+
+• Bounding box coordinates
+
+Additional Requirements:
+
+• Handle invalid or missing inputs gracefully
+
+• Return appropriate HTTP status codes
+
+Submit:
+
+• API source code
+
+• Screenshot or logs showing successful API response using Postman or curl
+
+3. API Testing & Validation (10 Marks)
+
+• Test the API using:
+
+• Postman or curl
+
+• At least 5 different test images
+
+• Verify correctness of predictions and response format.
+
+Submit:
+
+• Test images used
+
+• Screenshots of API requests and responses
+
+• Brief discussion on prediction accuracy
+
+4. Dockerization of the Application (30 Marks)
+
+Containerize the entire application using Docker.
+
+Docker Requirements:
+1. Create a Dockerfile that:
+
+- Uses an appropriate Python base image
+
+- Installs all required dependencies
+
+- Copies model weights and source code
+
+- Exposes the API port
+
+2. Build the Docker image successfully.
+
+3. Run the Docker container and access the API from the host machine.
+
+Submit:
+
+• Dockerfile
+
+• requirements.txt
+
+• Docker build and run commands
+
+• Screenshot/log showing the API running inside Docker
+
+5. Deployment & Documentation (20 Marks)
+
+6. Write clear documentation explaining:
+
+- How to build the Docker image
+
+- How to run the container
+
+- How to use the API endpoint
+
+2. Project must include:
+
+- Well-structured folder hierarchy
+
+- Clear comments in code
+
+Submit:
+
+• README.md
+
+• GitHub repository or zipped project folder containing:
+
+- API code
+
+- Dockerfile
+
+- Model weights
+
+- Documentation
+
+Bonus Task (15 Marks – Optional)
+Cloud Deployment (Extra Credit)
+
+1. Deploy the Dockerized application on:
+
+- AWS / GCP / Azure / Railway / Render / (any one)
+
+2. Make the API publicly accessible.
+
+3. Test the public endpoint with sample images.
+
+Submit:
+
+• Public API URL
+
+• Screenshots of successful API responses
+
+• Brief explanation of deployment steps
+
+Please submit the github repository link for the project. Additionally, share a google doc link containing the screenshots, discussion, links and other necessary items.

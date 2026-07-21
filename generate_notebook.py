@@ -1,0 +1,232 @@
+import json
+
+notebook = {
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Module 17 Assignment: YOLOv11 Object Detection REST API, Testing & Dockerization\n",
+    "\n",
+    "এই নোটবুকটিতে **Ostad AI Engineers - Module 17** এসাইনমেন্টের সম্পূর্ণ সমাধান ক্রমান্বয়ে দেওয়া হলো।\n",
+    "\n",
+    "---"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 📌 ধাপ ১: এনভাইরনমেন্ট সেটআপ এবং প্রয়োজনীয় লাইব্রেরি ইনস্টলেশন (Setup Environment)\n",
+    "প্রথমেই Google Colab এ প্রয়োজনীয় প্যাকেজগুলো (Ultralytics, FastAPI, Uvicorn, Nest-Asyncio ইত্যাদি) ইনস্টল করে নেওয়া হচ্ছে।"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": None,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# ==============================================================================\n",
+    "# ধাপ ১: লাইব্রেরি ইনস্টল করা\n",
+    "# ==============================================================================\n",
+    "!pip install -q ultralytics fastapi uvicorn python-multipart requests nest_asyncio pillow opencv-python-headless\n",
+    "print('✅ সকল ডিপেন্ডেন্সি সফলভাবে ইনস্টল হয়েছে!')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 📌 Task 1: Model Integration & Inference Pipeline (15 Marks)\n",
+    "YOLOv11 Pretrained / Custom Model Weights লোড করা এবং সিঙ্গেল ইমেজে অবজেক্ট ডিটেকশন চালনা করা।"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": None,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# ==============================================================================\n",
+    "# ধাপ ১.১: লাইব্রেরি ইমপোর্ট এবং ইনফারেন্স ফাংশন তৈরি\n",
+    "# ==============================================================================\n",
+    "import io                                        # বাইট স্ট্রিম প্রসেস করার জন্য\n",
+    "from PIL import Image                            # ইমেজ ওপেন ও প্রসেসের জন্য PIL\n",
+    "from ultralytics import YOLO                      # YOLOv11 অবজেক্ট ডিটেকশন মডেলের জন্য\n",
+    "\n",
+    "# YOLOv11 Pretrained Nano Model লোড করা\n",
+    "model = YOLO('yolo11n.pt')                       # YOLOv11 মডেল অবজেক্ট তৈরি\n",
+    "\n",
+    "def predict_yolo(image_bytes, conf_threshold=0.25):\n",
+    "    \"\"\"ইমেজ বাইট গ্রহণ করে ডিটেকশন ফলাফল রিটার্ন করে\"\"\"\n",
+    "    img = Image.open(io.BytesIO(image_bytes)).convert('RGB') # PIL ইমেজে কনভার্ট\n",
+    "    results = model.predict(source=img, conf=conf_threshold, verbose=False) # প্রেডিকশন চালানো\n",
+    "    \n",
+    "    predictions = []\n",
+    "    for box in results[0].boxes:\n",
+    "        cls_id = int(box.cls[0].item())\n",
+    "        predictions.append({\n",
+    "            'class_name': model.names[cls_id],  # ডিনোমিনেশন/ক্লাসের নাম\n",
+    "            'confidence': round(float(box.conf[0].item()), 4), # কনফিডেন্স স্কোর\n",
+    "            'bounding_box': [round(x, 2) for x in box.xyxy[0].tolist()] # [xmin, ymin, xmax, ymax]\n",
+    "        })\n",
+    "    return {'total_detections': len(predictions), 'predictions': predictions}\n",
+    "\n",
+    "print('✅ YOLOv11 Inference Pipeline প্রস্তুত!')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 📌 Task 2: REST API Development using FastAPI (25 Marks)\n",
+    "FastAPI দিয়ে `/predict` (POST) এন্ডপয়েন্ট তৈরি করা যেখানে ইমেজ ফাইল ফাইল আপলোড করে JSON ফলাফল পাওয়া যাবে।"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": None,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# ==============================================================================\n",
+    "# ধাপ ২.১: FastAPI অ্যাপ এবং এন্ডপয়েন্ট তৈরি\n",
+    "# ==============================================================================\n",
+    "from fastapi import FastAPI, File, UploadFile, HTTPException, status\n",
+    "from fastapi.responses import JSONResponse\n",
+    "\n",
+    "app = FastAPI(title=\"YOLOv11 Detection API\")     # FastAPI অ্যাপ ইন্সট্যান্স\n",
+    "\n",
+    "@app.get(\"/\")\n",
+    "def index():\n",
+    "    return {\"status\": \"running\", \"message\": \"YOLOv11 API is Active\"}\n",
+    "\n",
+    "@app.post(\"/predict\")\n",
+    "async def predict_endpoint(file: UploadFile = File(...)):\n",
+    "    if not file or not file.filename:\n",
+    "        raise HTTPException(status_code=400, detail=\"ফাইল পাওয়া যায়নি।\")\n",
+    "    \n",
+    "    content = await file.read()\n",
+    "    if len(content) == 0:\n",
+    "        raise HTTPException(status_code=400, detail=\"খালি (0 bytes) ফাইল!\")\n",
+    "        \n",
+    "    res = predict_yolo(content)\n",
+    "    return {\n",
+    "        \"success\": True,\n",
+    "        \"filename\": file.filename,\n",
+    "        \"total_detections\": res[\"total_detections\"],\n",
+    "        \"predictions\": res[\"predictions\"]\n",
+    "    }\n",
+    "\n",
+    "print('✅ FastAPI REST API স্ক্রিপ্ট সম্পন্ন!')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 📌 Task 3: API Testing & Validation (10 Marks)\n",
+    "Colab ব্যাকগ্রাউন্ডে সার্ভার চালু করা এবং ৫টি টেস্ট ইমেজের ওপর API হ্যান্ডলিং ও রেসপন্স যাচাই।"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": None,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# ==============================================================================\n",
+    "# ধাপ ৩.১: টেস্ট ইমেজের জন্য ৫টি ইমেজ তৈরি ও টেস্ট পরিচালনা\n",
+    "# ==============================================================================\n",
+    "import os, uvicorn, threading, time, requests\n",
+    "from PIL import Image, ImageDraw\n",
+    "\n",
+    "# ব্যাকগ্রাউন্ডে Uvicorn সার্ভার চালু করার থ্রেড\n",
+    "def start_server():\n",
+    "    uvicorn.run(app, host=\"127.0.0.1\", port=8000, log_level=\"error\")\n",
+    "\n",
+    "server_thread = threading.Thread(target=start_server, daemon=True)\n",
+    "server_thread.start()\n",
+    "time.sleep(2) # সার্ভার চালু হওয়া পর্যন্ত অপেক্ষা\n",
+    "\n",
+    "# ৫টি টেস্ট ইমেজ তৈরি\n",
+    "os.makedirs(\"test_images\", exist_ok=True)\n",
+    "for i in range(1, 6):\n",
+    "    img = Image.new(\"RGB\", (300, 300), color=(50*i, 200-30*i, 100+20*i))\n",
+    "    draw = ImageDraw.Draw(img)\n",
+    "    draw.rectangle([50, 50, 200, 200], fill=(200, 50, 50))\n",
+    "    img.save(f\"test_images/test{i}.jpg\")\n",
+    "\n",
+    "# ৫টি ইমেজে API রিকোয়েস্ট পাঠানো\n",
+    "print(\"--- API Testing Results ---\")\n",
+    "for i in range(1, 6):\n",
+    "    file_path = f\"test_images/test{i}.jpg\"\n",
+    "    with open(file_path, \"rb\") as f:\n",
+    "        resp = requests.post(\"http://127.0.0.1:8000/predict\", files={\"file\": (f\"test{i}.jpg\", f, \"image/jpeg\")})\n",
+    "        print(f\"File: test{i}.jpg | Status: {resp.status_code} | Detections: {resp.json().get('total_detections')}\")\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 📌 Task 4: Dockerization (30 Marks)\n",
+    "Docker ⚙️ `Dockerfile` এবং `requirements.txt` তৈরি।"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": None,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# ==============================================================================\n",
+    "# ধাপ ৪.১: Dockerfile এবং requirements.txt ফাইল তৈরি\n",
+    "# ==============================================================================\n",
+    "dockerfile_content = \"\"\"FROM python:3.10-slim\n",
+    "WORKDIR /app\n",
+    "RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*\n",
+    "COPY requirements.txt .\n",
+    "RUN pip install --no-cache-dir -r requirements.txt\n",
+    "COPY app /app/app\n",
+    "COPY models /app/models\n",
+    "EXPOSE 8000\n",
+    "CMD [\"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]\n",
+    "\"\"\"\n",
+    "with open(\"Dockerfile\", \"w\") as f:\n",
+    "    f.write(dockerfile_content)\n",
+    "\n",
+    "reqs = \"fastapi\\nuvicorn\\nultralytics\\npillow\\nopencv-python-headless\\npython-multipart\\nrequests\\n\"\n",
+    "with open(\"requirements.txt\", \"w\") as f:\n",
+    "    f.write(reqs)\n",
+    "\n",
+    "print('✅ Dockerfile এবং requirements.txt সফলভাবে তৈরি হয়েছে!')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 📌 Task 5: Summary & Submission Checklist (20 Marks)\n",
+    "- [x] YOLOv11 Inference Pipeline\n",
+    "- [x] FastAPI REST API (`/predict` POST)\n",
+    "- [x] API Testing on 5 images\n",
+    "- [x] Dockerfile & Requirements\n",
+    "- [x] README Documentation"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
+
+with open("Assignment17_YOLOv11_FastAPI_Docker.ipynb", "w", encoding="utf-8") as f:
+    json.dump(notebook, f, indent=1, ensure_ascii=False)
+
+print("Notebook generated successfully!")

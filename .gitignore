@@ -1,0 +1,32 @@
+# Python Cache & Virtual Envs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE Files
+.vscode/
+.idea/
+
+# Large Model Weights (Optional: remove line below if submitting yolo11n.pt in repo)
+# *.pt
+
+# Temporary Generated Demo & Test Outputs
+demo_sample.jpg
+demo_detection_result.jpg
+
+# Log files
+*.log
+
+# Assignment Report & Raw Screenshots (To be submitted separately)
+*.docx
+build_report.py
+*.png
